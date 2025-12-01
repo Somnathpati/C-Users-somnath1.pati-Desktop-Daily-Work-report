@@ -95,7 +95,7 @@ THEMATICS = [
      "keywords": ["spatial decision","risk intelligence"]},
 
     {"id": 28, "name": "IT Documentation & Other Support",
-     "keywords": ["documentation","vba","excel","installation","support","help","troubleshoot","issue"]}
+     "keywords": ["documentation","computer","laptop","installation","support","assets","troubleshoot","it"]}
 ]
 
 # ---------------- UTILITIES ---------------- #
@@ -253,3 +253,4 @@ else:
         file_name="daily_thematic_log_filtered.csv",
         mime="text/csv"
     )
+
