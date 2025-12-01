@@ -381,36 +381,59 @@ else:
         st.dataframe(filtered, use_container_width=True)
 
         # Thematic summary
-        st.subheader("Summary: Number of activities per thematic")
-        # explode thematic_ids into rows
-        temp = filtered.copy()
-        temp["thematic_ids"] = temp["thematic_ids"].fillna("")
-        temp = temp[temp["thematic_ids"] != ""]
-        temp = temp.assign(thematic_id=temp["thematic_ids"].str.split("|")).explode(
-            "thematic_id"
-        )
-        temp["thematic_id"] = temp["thematic_id"].astype(int)
+        # ---------------- THEMATICS SUMMARY (FULL SAFE VERSION) ----------------
 
-        if not temp.empty:
-            # map id -> name
-            id_to_name = {t["id"]: t["name"] for t in THEMATICS}
-            summary = (
-                temp.groupby("thematic_id")
-                .size()
-                .reset_index(name="activity_count")
-                .sort_values("activity_count", ascending=False)
-            )
-            summary["thematic_name"] = summary["thematic_id"].map(id_to_name)
-            summary = summary[["thematic_id", "thematic_name", "activity_count"]]
-            st.dataframe(summary, use_container_width=True)
-        else:
-            st.info("No thematic data found for the current filter.")
+st.subheader("Summary: Number of activities per thematic")
 
-        # Download
-        csv_bytes = filtered.to_csv(index=False).encode("utf-8")
-        st.download_button(
-            "Download filtered data as CSV",
-            data=csv_bytes,
-            file_name="daily_thematic_log_filtered.csv",
-            mime="text/csv",
-        )
+temp = filtered.copy()
+
+# ✅ Force everything to safe string format
+temp["thematic_ids"] = (
+    temp["thematic_ids"]
+    .fillna("")
+    .apply(lambda x: str(x))      # convert ANY type to string safely
+    .str.strip()
+)
+
+# ✅ Remove any accidental characters other than digits & |
+temp["thematic_ids"] = temp["thematic_ids"].str.replace(
+    r"[^0-9|]", "", regex=True
+)
+
+# ✅ Remove blank rows
+temp = temp[temp["thematic_ids"] != ""]
+
+if temp.empty:
+    st.info("No data available for thematic summary.")
+else:
+    # ✅ This will NEVER crash now
+    temp = temp.assign(
+        thematic_id=temp["thematic_ids"].str.split("|")
+    ).explode("thematic_id")
+
+    temp["thematic_id"] = pd.to_numeric(
+        temp["thematic_id"], errors="coerce"
+    )
+
+    temp = temp.dropna(subset=["thematic_id"])
+    temp["thematic_id"] = temp["thematic_id"].astype(int)
+
+    # Mapping id → name
+    id_to_name = {t["id"]: t["name"] for t in THEMATICS}
+
+    summary = (
+        temp.groupby("thematic_id")
+        .size()
+        .reset_index(name="activity_count")
+        .sort_values("activity_count", ascending=False)
+    )
+
+    summary["thematic_name"] = summary["thematic_id"].map(id_to_name)
+
+    summary = summary[
+        ["thematic_id", "thematic_name", "activity_count"]
+    ]
+
+    st.dataframe(summary, use_container_width=True)
+
+
